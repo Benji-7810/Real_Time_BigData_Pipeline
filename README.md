@@ -1,149 +1,156 @@
-# Projet Big Data — Streaming LeBonCoin
-> Plateforme de Streaming Infini d'Interactions Commerciales  
-> PySpark Structured Streaming · GraphFrames · Dashboard Dynamique
+# Real-Time Big Data Pipeline - Marketplace Interaction Analysis
 
----
+## Overview
+
+This project implements a **real-time Big Data processing pipeline** that simulates and analyzes interactions on an online marketplace inspired by LeBonCoin.
+
+Using **Apache Spark Structured Streaming**, the system processes continuously generated events, performs time-window aggregations, and applies graph algorithms to analyze relationships between users, sellers, and products.
+
+The results are displayed through an interactive dashboard built with **Dash and Cytoscape**.
 
 ## Architecture
 
+The pipeline consists of three components:
+
+1. **Data Generator:** Simulates marketplace interactions and sends JSON events through a TCP socket.
+2. **Spark Streaming Pipeline:** Processes incoming events, performs aggregations, and computes graph analytics using GraphFrames.
+3. **Interactive Dashboard:** Visualizes relationships, network statistics, and influential nodes in near real time.
+
+**Data Flow**
+
+`Event Generator → TCP Socket → PySpark Structured Streaming → GraphFrames → JSON Files → Dash Dashboard`
+
+## Technologies
+
+| Technology | Purpose |
+|---|---|
+| Python 3.10+ | Application development |
+| PySpark 3.5.3 | Distributed stream processing |
+| Spark Structured Streaming | Real-time event processing |
+| GraphFrames | Graph analytics and PageRank |
+| Dash & Cytoscape | Interactive data visualization |
+| Pandas | Data manipulation |
+| Java 17 / 21 | Spark runtime |
+
+## Key Features
+
+### Real-Time Data Processing
+
+- Continuous event ingestion through a TCP socket.
+- Micro-batch processing every 5 seconds.
+- Sliding window aggregations (30-second windows, 10-second intervals).
+- Watermarking to handle late-arriving events.
+- Two concurrent Spark streaming queries.
+
+### Graph Analytics
+
+Marketplace interactions are represented as a graph containing:
+
+- **Nodes:** Users, sellers, and products.
+- **Edges:** Likes, views, purchases, and product listings.
+
+GraphFrames is used to calculate:
+
+- **Connected Components:** Identify connected groups within the network.
+- **PageRank:** Measure node influence based on graph relationships.
+
+### Interactive Dashboard
+
+The dashboard provides:
+
+- Automatic updates every 5 seconds.
+- Interactive network visualization.
+- Real-time statistics on users, sellers, products, and connections.
+- Top 3 nodes ranked by PageRank.
+- Pause and resume functionality.
+
+## Project Structure
+
+```text
+Real-Time-BigData-Pipeline/
+├── generator/
+│   └── producer.py
+├── spark/
+│   └── pipeline.py
+├── dashboard/
+│   └── app.py
+├── data/
+│   └── graph/
+│       ├── vertices.json
+│       └── edges.json
+├── rapport_bigdata.docx
+└── README.md
 ```
-generator/producer.py
-  └─ TCP socket :9999
-        │
-        ▼
-spark/pipeline.py  (PySpark 3.5 Structured Streaming)
-  ├─ query_console : sliding window (30s/10s) + watermark (10s) → stdout
-  └─ query_graph   : foreachBatch → GraphFrames (connectedComponents + pageRank) → data/graph/
-        │
-        ▼
-dashboard/app.py  (Dash + Cytoscape)
-  └─ polling JSON toutes les 5s → graphe interactif sur :8050
-```
-
----
-
-## Prérequis
-
-- Python 3.10+
-- Java 17 ou Java 21
-- PySpark **3.5.3** (via pip — ne pas utiliser de Spark système)
-- GraphFrames 0.8.4 (chargé automatiquement via `spark.jars.packages`)
-
-> **Important** : si `SPARK_HOME` pointe vers une installation système Spark 4.x,  
-> commenter ces lignes dans `~/.bashrc` avant de lancer :
-> ```bash
-> # export SPARK_HOME=...
-> # export PYTHONPATH=...
-> ```
-> puis `source ~/.bashrc` et vérifier avec `echo $SPARK_HOME` (doit être vide).
-
----
 
 ## Installation
 
+### Prerequisites
+
+- Python 3.10 or later
+- Java 17 or 21
+- PySpark 3.5.3
+
+Clone the repository:
+
 ```bash
-pip install pyspark==3.5.3 graphframes dash dash-cytoscape pandas --break-system-packages
+git clone https://github.com/Benji-7810/Real-Time-BigData-Pipeline.git
+cd Real-Time-BigData-Pipeline
 ```
 
----
+Install dependencies:
 
-## Lancement (3 terminaux, depuis la racine du projet)
+```bash
+pip install pyspark==3.5.3 graphframes dash dash-cytoscape pandas
+```
 
-> **Ordre obligatoire** : le producer doit être démarré **avant** le pipeline.  
-> Le producer bloque jusqu'à ce que Spark se connecte sur le port 9999.
+GraphFrames 0.8.4 is automatically loaded through Spark's package configuration.
 
-**Terminal 1 — Producteur de données :**
+**Important:** Use the pip-installed Spark 3.5.3 environment rather than a system installation of Spark 4.x. Ensure that `SPARK_HOME` and `PYTHONPATH` do not reference an incompatible Spark installation.
+
+## Usage
+
+Run the following commands in three separate terminals from the project root.
+
+**Terminal 1 — Start the Data Generator**
+
 ```bash
 python3 generator/producer.py
 ```
 
-**Terminal 2 — Pipeline Spark :**
+**Terminal 2 — Start the Spark Pipeline**
+
 ```bash
 python3 spark/pipeline.py
 ```
-> Au premier lancement, Spark télécharge le JAR GraphFrames (~30s).  
-> Les fichiers JSON sont réinitialisés automatiquement à chaque démarrage.
 
-**Terminal 3 — Dashboard :**
+**Terminal 3 — Launch the Dashboard**
+
 ```bash
 python3 dashboard/app.py
 ```
-Ouvrir : http://localhost:8050
 
----
+Access the dashboard at:
 
-## Structure du projet
+http://localhost:8050
 
-```
-├── generator/
-│   └── producer.py          # Serveur TCP, génère les événements JSON
-├── spark/
-│   └── pipeline.py          # Pipeline Spark Structured Streaming + GraphFrames
-├── dashboard/
-│   └── app.py               # Dashboard Dash + Cytoscape
-├── data/
-│   └── graph/
-│       ├── vertices.json    # État courant des nœuds (réinitialisé au démarrage)
-│       └── edges.json       # État courant des arêtes (réinitialisé au démarrage)
-├── rapport_bigdata.docx     # Rapport technique
-└── README.md
-```
+**Note:** The data generator must be started before the Spark pipeline. The first execution may require additional time to download GraphFrames dependencies.
 
----
+## Results
 
-## Concepts PySpark implémentés
+The application demonstrates an end-to-end streaming architecture combining event generation, real-time processing, graph analytics, and interactive visualization.
 
-| Concept | Détail |
-|---|---|
-| **SparkSession** | Point d'entrée unique, `shuffle.partitions=4`, `driver.memory=2g` |
-| **Schema Enforcement** | `StructType` strict — évite l'inférence automatique coûteuse |
-| **Structured Streaming** | Source socket TCP, micro-batches déclenchés toutes les 5s |
-| **Sliding Window** | `window("30s", pas "10s")` — agrégation de `action_type` par tranche |
-| **Watermarking** | `withWatermark("timestamp", "10s")` — tolère les retards, libère la mémoire |
-| **Output Mode** | `update` pour la console · `append` + `foreachBatch` pour le graphe |
-| **GraphFrames** | `connectedComponents()` + `pageRank(resetProbability=0.15, maxIter=3)` |
-| **Deux queries parallèles** | `query_console` + `query_graph` démarrent simultanément |
-| **foreachBatch** | Accès direct au micro-batch en tant que DataFrame statique |
+It enables users to:
 
----
+- Monitor simulated marketplace interactions.
+- Analyze relationships between users, sellers, and products.
+- Identify connected network components.
+- Highlight influential nodes using PageRank.
+- Explore continuously updated graph data.
 
-## Modèle de Graphe (GraphFrames)
+## Author
 
-**Nœuds (Vertices)** — schéma : `id · type · label · out_degree · in_degree · component_id · pagerank`
+**Benjamin Bey**
 
-| Type | Couleur | Label affiché |
-|---|---|---|
-| `user` | Bleu `#4A90D9` | Ville de l'utilisateur |
-| `seller` | Rouge `#E74C3C` | Identifiant vendeur |
-| `product` | Vert `#2ECC71` | Catégorie du produit |
+Engineering Student in Applied Mathematics and Computer Science at CY Tech.
 
-**Arêtes (Edges)** — schéma : `src · dst · relationship`
-
-| Relation | Couleur | Direction |
-|---|---|---|
-| `AIME` | Orange | User → Product |
-| `VOUT` | Violet | User → Product |
-| `ACHAT` | Rouge | User → Product |
-| `PROPOSE` | Gris | Seller → Product |
-
-> La **taille des nœuds** est proportionnelle au score **PageRank** — les nœuds les plus influents (produits très convoités, vendeurs très actifs) apparaissent visuellement plus grands.
-
----
-
-## Dashboard
-
-- Rafraîchissement automatique toutes les **5 secondes**
-- Bouton **⏸ Pause / ▶ Reprendre** pour figer le graphe à n'importe quel moment
-- Barre de stats en temps réel : utilisateurs · vendeurs · produits · connexions · composantes connexes · **Top 3 PageRank**
-- Légende des types de nœuds et des types d'arêtes par couleur
-
----
-
-## Dépannage
-
-| Problème | Cause | Solution |
-|---|---|---|
-| `ClassNotFoundException: scala.Serializable` | Spark système 4.x actif | Commenter `SPARK_HOME` dans `~/.bashrc` |
-| `Connection refused` au démarrage | Producer pas encore lancé | Démarrer le producer **avant** le pipeline |
-| Graphe vide dans le dashboard | Fichiers JSON corrompus | Les JSON se réinitialisent automatiquement au redémarrage du pipeline |
-| `OutOfMemoryError` avec GraphFrames | Mémoire driver insuffisante | Déjà configuré : `spark.driver.memory=2g` dans pipeline.py |
+[GitHub Profile](https://github.com/Benji-7810)
