@@ -147,10 +147,3 @@ It enables users to:
 - Highlight influential nodes using PageRank.
 - Explore continuously updated graph data.
 
-## Author
-
-**Benjamin Bey**
-
-Engineering Student in Applied Mathematics and Computer Science at CY Tech.
-
-[GitHub Profile](https://github.com/Benji-7810)
